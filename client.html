@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Client</title>
+    <style>
+        #message-box {
+            width: 100%;
+            height: 300px;
+            border: 1px solid #000;
+            overflow-y: scroll;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Client</h1>
+    <label for="player-id">Player ID:</label>
+    <input type="text" id="player-id" placeholder="Enter your player ID"><br><br>
+    <button id="connect-button">Connect</button><br><br>
+
+    <label for="friend-id">Friend's Player ID:</label>
+    <input type="text" id="friend-id" placeholder="Enter friend's player ID"><br><br>
+
+    <label for="message">Message:</label>
+    <input type="text" id="message" placeholder="Enter your message"><br><br>
+
+    <button id="send-button">Send</button><br><br>
+
+    <div id="message-box"></div>
+
+    <script>
+        let socket;
+
+        document.getElementById('connect-button').addEventListener('click', function() {
+            let playerId = document.getElementById('player-id').value;
+            if (!socket) {
+                socket = new WebSocket("ws://localhost:8084/join");
+
+                socket.onopen = function(e) {
+                    console.log("[open] Connection established");
+
+                    // Send initial join message with blank player_id and a unique android_id
+                    let joinMsg = {
+                        action: "Send_ID",
+                        player_id: "",
+                        unique_id: "unique-android-id", // Use a real unique android ID
+                        player_name: playerId,
+                        token_ID: playerId + "Token"
+                    };
+                    socket.send(JSON.stringify(joinMsg));
+                    console.log("[open] Sent initial join message");
+                };
+
+                socket.onmessage = function(event) {
+                    console.log(`[message] Data received from server: ${event.data}`);
+                    let messageBox = document.getElementById('message-box');
+                    messageBox.innerHTML += `<p>${event.data}</p>`;
+                };
+
+                socket.onclose = function(event) {
+                    if (event.wasClean) {
+                        console.log(`[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+                    } else {
+                        console.log('[close] Connection died');
+                    }
+                };
+
+                socket.onerror = function(error) {
+                    console.log(`[error] ${error.message}`);
+                };
+            }
+        });
+
+        document.getElementById('send-button').addEventListener('click', function() {
+            let playerId = document.getElementById('player-id').value;
+            let friendId = document.getElementById('friend-id').value;
+            let message = document.getElementById('message').value;
+
+            if (playerId && friendId && message) {
+                let msg = {
+                    action: "ChatMessage",
+                    player_id: playerId,
+                    unique_id: "unique-android-id",  // Use the same unique android ID
+                    player_name: playerId,  // Assuming player_name is the player's name
+                    chat_message: message,
+                    funique_id: friendId
+                };
+                socket.send(JSON.stringify(msg));
+            } else {
+                alert("Please fill in all fields");
+            }
+        });
+    </script>
+</body>
+</html>
